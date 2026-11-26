@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.3.1 — 2026-11-26
+
+- Adopt Display Brightness as the app, installer, and repository name.
+- Keep existing keyboard and display selection preferences when upgrading.
+
 ## 1.3.0 — 2026-11-26
 
 First public release.
