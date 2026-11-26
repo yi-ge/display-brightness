@@ -1,0 +1,16 @@
+/.build/
+/build/
+/dist/
+/.swiftpm/
+.DS_Store
+*.dmg
+*.zip
+*.p12
+*.pfx
+*.p8
+*.key
+*.pem
+*.keychain
+*.keychain-db
+.env
+.env.*
