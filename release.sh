@@ -2,11 +2,21 @@
 set -euo pipefail
 
 : "${MACOS_SIGN_IDENTITY:?Set MACOS_SIGN_IDENTITY to a Developer ID Application identity}"
-: "${MACOS_NOTARY_PROFILE:?Set MACOS_NOTARY_PROFILE to a notarytool Keychain profile}"
 export MACOS_SIGN_IDENTITY
 
+if [[ -n ${MACOS_NOTARY_KEY_PATH:-} ]]; then
+    : "${MACOS_NOTARY_KEY_ID:?Set MACOS_NOTARY_KEY_ID for the team API key}"
+    : "${MACOS_NOTARY_ISSUER_ID:?Set MACOS_NOTARY_ISSUER_ID for the team API key}"
+    notary_args=(--key "$MACOS_NOTARY_KEY_PATH" --key-id "$MACOS_NOTARY_KEY_ID" --issuer "$MACOS_NOTARY_ISSUER_ID")
+else
+    : "${MACOS_NOTARY_PROFILE:?Set MACOS_NOTARY_PROFILE to a notarytool Keychain profile}"
+    notary_args=(--keychain-profile "$MACOS_NOTARY_PROFILE")
+fi
+
 source_dir="$(cd "$(dirname "$0")" && pwd)"
-version="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$source_dir/Info.plist")"
+info="$source_dir/Info.plist"
+version="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$info")"
+bundle_id="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$info")"
 if [[ ! $version =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
     printf 'Invalid release version in Info.plist: %s\n' "$version" >&2
     exit 1
@@ -24,24 +34,29 @@ display_name="${bundle_name%.app}"
 staging="$(mktemp -d -t display-brightness-release)"
 trap '/usr/bin/find "$staging" -depth -delete' EXIT
 artifact="${display_name// /-}-$version-macos-arm64.dmg"
+image="$staging/$artifact"
 mkdir "$staging/volume"
-
-# Staple the application before putting it on the disk image.
-/usr/bin/ditto -c -k --keepParent "$app" "$staging/app.zip"
-/usr/bin/xcrun notarytool submit "$staging/app.zip" --keychain-profile "$MACOS_NOTARY_PROFILE" --wait
-/usr/bin/xcrun stapler staple "$app"
-/usr/bin/xcrun stapler validate "$app"
-/usr/sbin/spctl --assess --type execute --verbose "$app"
 
 /usr/bin/ditto "$app" "$staging/volume/$bundle_name"
 ln -s /Applications "$staging/volume/Applications"
 cp "$source_dir/LICENSE" "$staging/volume/LICENSE.txt"
-/usr/bin/hdiutil create -volname "$display_name" -srcfolder "$staging/volume" -format UDZO "$staging/$artifact"
-/usr/bin/codesign --force --timestamp --sign "$MACOS_SIGN_IDENTITY" "$staging/$artifact"
-/usr/bin/xcrun notarytool submit "$staging/$artifact" --keychain-profile "$MACOS_NOTARY_PROFILE" --wait
-/usr/bin/xcrun stapler staple "$staging/$artifact"
-/usr/bin/xcrun stapler validate "$staging/$artifact"
-/usr/bin/hdiutil verify "$staging/$artifact"
+/usr/bin/hdiutil create -volname "$display_name" -srcfolder "$staging/volume" -format UDZO "$image"
+/usr/bin/codesign --timestamp --identifier "$bundle_id.disk-image" --sign "$MACOS_SIGN_IDENTITY" "$image"
+
+# The disk image is the distribution container. Apple also scans the nested app.
+/usr/bin/xcrun notarytool submit "$image" "${notary_args[@]}" --wait --timeout 20m --output-format json \
+    | tee "$staging/notarization.json"
+if [[ "$(/usr/bin/plutil -extract status raw "$staging/notarization.json")" != Accepted ]]; then
+    printf 'Apple did not accept the disk image for notarization.\n' >&2
+    exit 1
+fi
+
+/usr/bin/xcrun stapler staple "$image"
+/usr/bin/xcrun stapler validate "$image"
+/usr/bin/codesign --verify --strict "$image"
+/usr/sbin/spctl --assess --type open --context context:primary-signature --verbose "$image"
+/usr/sbin/spctl --assess --type execute --verbose "$app"
+/usr/bin/hdiutil verify "$image"
 (
     cd "$staging"
     /usr/bin/shasum -a 256 "$artifact" > SHA256SUMS.txt
