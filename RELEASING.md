@@ -10,7 +10,7 @@ The standard `./build.sh` command compiles and ad-hoc signs the app for local us
 
 ```sh
 export MACOS_SIGN_IDENTITY='Developer ID Application: Example Name (TEAMID)'
-export MACOS_NOTARY_PROFILE='rv100-brightness-notary'
+export MACOS_NOTARY_PROFILE='display-brightness-notary'
 ./release.sh
 ```
 

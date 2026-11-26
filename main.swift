@@ -3,7 +3,7 @@ import ApplicationServices
 import Carbon.HIToolbox
 import OSLog
 
-private let logger = Logger(subsystem: "local.rv100-brightness", category: "brightness")
+private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "display-brightness", category: "brightness")
 private let shortcutSignature: OSType = 0x52563130 // RV10
 private let nativePreference = "HandleNativeBrightnessKeys"
 private let displayPreference = "PreferredDisplayUUID"
@@ -35,7 +35,7 @@ private func nativeBrightnessKey(_ type: CGEventType, _ event: CGEvent) -> (dire
 private final class BrightnessApp: NSObject, NSApplicationDelegate {
     private let control: DisplayControl
     private let feedback = BrightnessFeedback()
-    private let worker = DispatchQueue(label: "local.rv100-brightness.ddc", qos: .userInitiated)
+    private let worker = DispatchQueue(label: "display-brightness.ddc", qos: .userInitiated)
     private let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
     private let status = NSMenuItem(title: "正在检测外接显示器…", action: nil, keyEquivalent: "")
     private let displayPicker = NSMenuItem(title: "控制的显示器", action: nil, keyEquivalent: "")

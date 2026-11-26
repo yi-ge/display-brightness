@@ -19,9 +19,11 @@ if [[ $signing_info != *"Authority=Developer ID Application:"* ]]; then
     exit 1
 fi
 
-staging="$(mktemp -d -t rv100-release)"
+bundle_name="${app##*/}"
+display_name="${bundle_name%.app}"
+staging="$(mktemp -d -t display-brightness-release)"
 trap '/usr/bin/find "$staging" -depth -delete' EXIT
-artifact="RV100-Brightness-$version-macos-arm64.dmg"
+artifact="${display_name// /-}-$version-macos-arm64.dmg"
 mkdir "$staging/volume"
 
 # Staple the application before putting it on the disk image.
@@ -31,10 +33,10 @@ mkdir "$staging/volume"
 /usr/bin/xcrun stapler validate "$app"
 /usr/sbin/spctl --assess --type execute --verbose "$app"
 
-/usr/bin/ditto "$app" "$staging/volume/RV100 Brightness.app"
+/usr/bin/ditto "$app" "$staging/volume/$bundle_name"
 ln -s /Applications "$staging/volume/Applications"
 cp "$source_dir/LICENSE" "$staging/volume/LICENSE.txt"
-/usr/bin/hdiutil create -volname "RV100 Brightness" -srcfolder "$staging/volume" -format UDZO "$staging/$artifact"
+/usr/bin/hdiutil create -volname "$display_name" -srcfolder "$staging/volume" -format UDZO "$staging/$artifact"
 /usr/bin/codesign --force --timestamp --sign "$MACOS_SIGN_IDENTITY" "$staging/$artifact"
 /usr/bin/xcrun notarytool submit "$staging/$artifact" --keychain-profile "$MACOS_NOTARY_PROFILE" --wait
 /usr/bin/xcrun stapler staple "$staging/$artifact"

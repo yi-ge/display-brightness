@@ -1,8 +1,8 @@
-# RV100 Brightness
+# Display Brightness
 
-[![MIT 许可证](https://img.shields.io/github/license/yi-ge/rv100-brightness?style=flat-square)](LICENSE)
+[![MIT 许可证](https://img.shields.io/github/license/yi-ge/display-brightness?style=flat-square)](LICENSE)
 
-[English](README.md) · [发布版本](https://github.com/yi-ge/rv100-brightness/releases)
+[English](README.md) · [发布版本](https://github.com/yi-ge/display-brightness/releases)
 
 Apple Silicon Mac 上的外接显示器亮度工具。通过 DDC/CI 调节显示器背光，接入兼容屏幕后自动识别。
 
@@ -23,19 +23,19 @@ Apple Silicon Mac 上的外接显示器亮度工具。通过 DDC/CI 调节显示
 ```sh
 xcode-select --install
 brew install m1ddc
-git clone https://github.com/yi-ge/rv100-brightness.git
-cd rv100-brightness
+git clone https://github.com/yi-ge/display-brightness.git
+cd display-brightness
 ./build.sh
 mkdir -p "$HOME/Applications"
-ditto "build/RV100 Brightness.app" "$HOME/Applications/RV100 Brightness.app"
-open "$HOME/Applications/RV100 Brightness.app"
+ditto "build/Display Brightness.app" "$HOME/Applications/Display Brightness.app"
+open "$HOME/Applications/Display Brightness.app"
 ```
 
-如果[发布页](https://github.com/yi-ge/rv100-brightness/releases)提供已公证的 DMG，打开镜像后可将 RV100 Brightness 拖入「应用程序」并启动。两种方式都需要 m1ddc。更新前请先退出已在运行的旧版。
+如果[发布页](https://github.com/yi-ge/display-brightness/releases)提供已公证的 DMG，打开镜像后可将 Display Brightness 拖入「应用程序」并启动。两种方式都需要 m1ddc。更新前请先退出旧版，并将旧应用从「应用程序」移出，再启动新版。
 
 ## 使用
 
-- **原生亮度键**。F1 调暗，F2 调亮。在菜单栏太阳图标中选择「启用原生亮度键」，再到系统设置「隐私与安全 → 设备控制和数据访问」中允许 RV100 Brightness。较早的 macOS 对应「辅助功能」。
+- **原生亮度键**。F1 调暗，F2 调亮。在菜单栏太阳图标中选择「启用原生亮度键」，再到系统设置「隐私与安全 → 设备控制和数据访问」中允许 Display Brightness。较早的 macOS 对应「辅助功能」。
 - **备用组合键**。Control + Option + ↓ 调暗，Control + Option + ↑ 调亮，无需输入权限。
 - **选择屏幕**。从太阳图标菜单打开「控制的显示器」。自动模式优先选择兼容的主屏。指定屏断开时会切到另一台兼容屏，接回后恢复该选择。
 - **亮度进度条**。根据选中屏幕的硬件亮度上限与回读值显示百分比。
