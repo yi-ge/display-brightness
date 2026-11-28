@@ -18,6 +18,14 @@ The app was tested on macOS 27.0.1 with an RV100 Max. The multi-display selectio
 
 ## Install
 
+1. Install [Homebrew](https://brew.sh/) and run `brew install m1ddc`.
+2. Download the signed and notarized Apple Silicon DMG from the [latest release](https://github.com/yi-ge/display-brightness/releases/latest).
+3. Open the DMG, drag **Display Brightness** into **Applications**, and launch it from there.
+
+If upgrading, quit the previous version and move its app bundle out of Applications before installing the new version.
+
+### Build from source
+
 Install the Apple Command Line Tools and [Homebrew](https://brew.sh/), then build from source.
 
 ```sh
@@ -30,8 +38,6 @@ mkdir -p "$HOME/Applications"
 ditto "build/Display Brightness.app" "$HOME/Applications/Display Brightness.app"
 open "$HOME/Applications/Display Brightness.app"
 ```
-
-When a [release](https://github.com/yi-ge/display-brightness/releases) includes a notarized DMG, you can open the image, drag Display Brightness into Applications, and launch it. Install m1ddc in either case. Quit and remove the previous app bundle from Applications before launching the replacement.
 
 ## Use
 

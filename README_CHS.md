@@ -18,6 +18,14 @@ Apple Silicon Mac 上的外接显示器亮度工具。通过 DDC/CI 调节显示
 
 ## 安装
 
+1. 安装 [Homebrew](https://brew.sh/)，然后运行 `brew install m1ddc`。
+2. 从[最新发布页](https://github.com/yi-ge/display-brightness/releases/latest)下载适用于 Apple Silicon Mac 的 DMG。安装包已签名并通过 Apple 公证。
+3. 打开 DMG，将 **Display Brightness** 拖入「应用程序」，然后从「应用程序」启动。
+
+升级前请退出旧版，并将旧版从「应用程序」移出。
+
+### 从源码构建
+
 安装 Apple Command Line Tools 和 [Homebrew](https://brew.sh/)，然后从源码构建。
 
 ```sh
@@ -30,8 +38,6 @@ mkdir -p "$HOME/Applications"
 ditto "build/Display Brightness.app" "$HOME/Applications/Display Brightness.app"
 open "$HOME/Applications/Display Brightness.app"
 ```
-
-如果[发布页](https://github.com/yi-ge/display-brightness/releases)提供已公证的 DMG，打开镜像后可将 Display Brightness 拖入「应用程序」并启动。两种方式都需要 m1ddc。更新前请先退出旧版，并将旧应用从「应用程序」移出，再启动新版。
 
 ## 使用
 
