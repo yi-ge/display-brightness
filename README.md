@@ -47,6 +47,7 @@ open "$HOME/Applications/Display Brightness.app"
 - **Global shortcuts**. The defaults are **Control + Option + ↓** to dim and **Control + Option + ↑** to brighten. Open **设置…** from the sun menu to record your own shortcuts or restore the defaults. Include at least one of Control, Option, and Command. These shortcuts work without granting keyboard access.
 - **Adjustment step**. Use **每次调节幅度** in Settings to change how much each press adjusts brightness.
 - **Launch at login**. Enable **登录时启动 Display Brightness** in Settings. If macOS asks for approval, click **打开系统登录项** to open System Settings.
+- **Updates**. Version 1.5.0 and later check GitHub Releases automatically. Choose **检查更新…** in the sun menu to check now. Settings lets you turn off automatic checks or opt into automatic download and installation. If you have version 1.4.0 or earlier, install the latest DMG once to enable updates.
 - **Display selection**. Choose **控制的显示器** under the sun icon to select a display. Automatic mode prefers the main display when compatible. A saved choice resumes when you reconnect that display.
 - **Brightness feedback**. The progress bar shows the brightness reported by the selected monitor, normalized to its hardware range.
 - **Black at 0%**. A zero reading blacks out the selected screen while keeping it connected. Raise the brightness to bring the picture back.
@@ -61,4 +62,4 @@ open "$HOME/Applications/Display Brightness.app"
 
 [Contributing](CONTRIBUTING.md) · [Signing and releasing](RELEASING.md) · [Changelog](CHANGELOG.md)
 
-Display Brightness is available under the [MIT License](LICENSE). The separately installed m1ddc project has its own [MIT License](https://github.com/waydabber/m1ddc/blob/main/LICENSE).
+Display Brightness is available under the [MIT License](LICENSE). [Sparkle](https://sparkle-project.org/) handles updates and ships with its own license. The separately installed m1ddc project has its own [MIT License](https://github.com/waydabber/m1ddc/blob/main/LICENSE).

@@ -15,9 +15,9 @@
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
-    <string>1.4.0</string>
+    <string>1.5.0</string>
     <key>CFBundleVersion</key>
-    <string>6</string>
+    <string>7</string>
     <key>LSUIElement</key>
     <true/>
     <key>LSMinimumSystemVersion</key>
@@ -26,5 +26,19 @@
     <integer>6</integer>
     <key>DDCExecutable</key>
     <string>/opt/homebrew/bin/m1ddc</string>
+    <key>SUFeedURL</key>
+    <string>https://github.com/yi-ge/display-brightness/releases/latest/download/appcast.xml</string>
+    <key>SUPublicEDKey</key>
+    <string>7RKO+W1ZubocInMUrLaEQSNDXH6cMk1RbrtMKu1FlNI=</string>
+    <key>SUEnableAutomaticChecks</key>
+    <true/>
+    <key>SUAutomaticallyUpdate</key>
+    <false/>
+    <key>SUVerifyUpdateBeforeExtraction</key>
+    <true/>
+    <key>SURequireSignedFeed</key>
+    <true/>
+    <key>SUSignedFeedFailureExpirationInterval</key>
+    <integer>0</integer>
 </dict>
 </plist>

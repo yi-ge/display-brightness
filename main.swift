@@ -2,6 +2,7 @@ import AppKit
 import ApplicationServices
 import Carbon.HIToolbox
 import OSLog
+import Sparkle
 
 private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "display-brightness", category: "brightness")
 private let nativePreference = "HandleNativeBrightnessKeys"
@@ -33,7 +34,7 @@ private func nativeBrightnessKey(_ type: CGEventType, _ event: CGEvent) -> (dire
     }
 }
 
-private final class BrightnessApp: NSObject, NSApplicationDelegate {
+private final class BrightnessApp: NSObject, NSApplicationDelegate, SPUStandardUserDriverDelegate {
     private let control: DisplayControl
     private let feedback = BrightnessFeedback()
     private let worker = DispatchQueue(label: "display-brightness.ddc", qos: .userInitiated)
@@ -41,6 +42,12 @@ private final class BrightnessApp: NSObject, NSApplicationDelegate {
     private let status = NSMenuItem(title: "正在检测外接显示器…", action: nil, keyEquivalent: "")
     private let displayPicker = NSMenuItem(title: "控制的显示器", action: nil, keyEquivalent: "")
     private let shortcutSummary = NSMenuItem(title: "", action: nil, keyEquivalent: "")
+    private let checkUpdate = NSMenuItem(
+        title: "检查更新…", action: #selector(SPUStandardUpdaterController.checkForUpdates(_:)), keyEquivalent: ""
+    )
+    private lazy var updater = SPUStandardUpdaterController(
+        startingUpdater: false, updaterDelegate: nil, userDriverDelegate: self
+    )
     private let nativeKeys = NSMenuItem(
         title: "启用原生亮度键…", action: #selector(toggleNativeKeys), keyEquivalent: ""
     )
@@ -92,6 +99,8 @@ private final class BrightnessApp: NSObject, NSApplicationDelegate {
         menu.addItem(shortcutSummary)
         menu.addItem(nativeKeys)
         menu.addItem(preferences)
+        checkUpdate.target = updater
+        menu.addItem(checkUpdate)
         menu.addItem(.separator())
         menu.addItem(withTitle: "退出", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         statusItem.button?.image = NSImage(systemSymbolName: "sun.max", accessibilityDescription: "显示器亮度")
@@ -123,6 +132,27 @@ private final class BrightnessApp: NSObject, NSApplicationDelegate {
         )
         refresh()
         updateNativeKeys()
+        updater.startUpdater()
+    }
+
+    var supportsGentleScheduledUpdateReminders: Bool { true }
+
+    func standardUserDriverShouldHandleShowingScheduledUpdate(
+        _ update: SUAppcastItem, andInImmediateFocus immediateFocus: Bool
+    ) -> Bool {
+        immediateFocus
+    }
+
+    func standardUserDriverWillHandleShowingUpdate(
+        _ handleShowingUpdate: Bool, forUpdate update: SUAppcastItem, state: SPUUserUpdateState
+    ) {
+        if !state.userInitiated {
+            checkUpdate.title = "有可用更新（\(update.displayVersionString)）…"
+        }
+    }
+
+    func standardUserDriverWillFinishUpdateSession() {
+        checkUpdate.title = "检查更新…"
     }
 
     func applicationWillTerminate(_ notification: Notification) {
@@ -141,7 +171,7 @@ private final class BrightnessApp: NSObject, NSApplicationDelegate {
     @objc private func showSettings() {
         if settings == nil {
             settings = BrightnessSettings(
-                shortcuts: shortcuts, shortcutError: shortcutError, step: adjustmentStep,
+                shortcuts: shortcuts, shortcutError: shortcutError, step: adjustmentStep, updater: updater.updater,
                 saveShortcuts: { [weak self] in try self?.saveShortcuts($0) },
                 setStep: { UserDefaults.standard.set($0, forKey: stepPreference) }
             )
