@@ -44,7 +44,9 @@ open "$HOME/Applications/Display Brightness.app"
 ## Use
 
 - **Brightness keys**. F1 lowers the brightness and F2 raises it. To enable these keys, open the sun icon in the menu bar, select **启用原生亮度键**, then allow Display Brightness in **System Settings → Privacy & Security → Device Control and Data Access** on macOS 27. On earlier macOS versions, use **Accessibility**.
-- **Alternative shortcuts**. Use **Control + Option + ↓** and **Control + Option + ↑** without granting keyboard access.
+- **Global shortcuts**. The defaults are **Control + Option + ↓** to dim and **Control + Option + ↑** to brighten. Open **设置…** from the sun menu to record your own shortcuts or restore the defaults. Include at least one of Control, Option, and Command. These shortcuts work without granting keyboard access.
+- **Adjustment step**. Use **每次调节幅度** in Settings to change how much each press adjusts brightness.
+- **Launch at login**. Enable **登录时启动 Display Brightness** in Settings. If macOS asks for approval, click **打开系统登录项** to open System Settings.
 - **Display selection**. Choose **控制的显示器** under the sun icon to select a display. Automatic mode prefers the main display when compatible. A saved choice resumes when you reconnect that display.
 - **Brightness feedback**. The progress bar shows the brightness reported by the selected monitor, normalized to its hardware range.
 - **Black at 0%**. A zero reading blacks out the selected screen while keeping it connected. Raise the brightness to bring the picture back.

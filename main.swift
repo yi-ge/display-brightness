@@ -4,9 +4,10 @@ import Carbon.HIToolbox
 import OSLog
 
 private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "display-brightness", category: "brightness")
-private let shortcutSignature: OSType = 0x52563130 // RV10
 private let nativePreference = "HandleNativeBrightnessKeys"
 private let displayPreference = "PreferredDisplayUUID"
+private let shortcutsPreference = "BrightnessShortcuts"
+private let stepPreference = "BrightnessAdjustmentStep"
 private let systemDefinedEvent = UInt32(NSEvent.EventType.systemDefined.rawValue)
 
 private func nativeBrightnessKey(_ type: CGEventType, _ event: CGEvent) -> (direction: Int, pressed: Bool)? {
@@ -39,11 +40,18 @@ private final class BrightnessApp: NSObject, NSApplicationDelegate {
     private let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
     private let status = NSMenuItem(title: "正在检测外接显示器…", action: nil, keyEquivalent: "")
     private let displayPicker = NSMenuItem(title: "控制的显示器", action: nil, keyEquivalent: "")
+    private let shortcutSummary = NSMenuItem(title: "", action: nil, keyEquivalent: "")
     private let nativeKeys = NSMenuItem(
         title: "启用原生亮度键…", action: #selector(toggleNativeKeys), keyEquivalent: ""
     )
-    private var hotKeys: [EventHotKeyRef] = []
-    private var hotKeyHandler: EventHandlerRef?
+    private var settings: BrightnessSettings?
+    private var shortcuts = BrightnessShortcutPair.defaults
+    private var shortcutError: String?
+    private lazy var hotKeys = BrightnessHotKeys { [weak self] direction in
+        guard let self else { return }
+        if self.settings?.record(self.shortcuts[direction]) == true { return }
+        self.adjust(direction: direction.delta)
+    }
     private var tap: CFMachPort?
     private var tapSource: CFRunLoopSource?
     private var permissionTimer: Timer?
@@ -65,26 +73,40 @@ private final class BrightnessApp: NSObject, NSApplicationDelegate {
         DisplayBrightness.selected(in: displays, preferred: preferredDisplayID)
     }
 
+    private var adjustmentStep: Int {
+        let saved = UserDefaults.standard.integer(forKey: stepPreference)
+        return (1...100).contains(saved) ? saved : control.step
+    }
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         let menu = NSMenu()
-        let shortcut = NSMenuItem(title: "⌃⌥↑ 调亮   ⌃⌥↓ 调暗", action: nil, keyEquivalent: "")
         let rescan = NSMenuItem(title: "重新检测显示器", action: #selector(refresh), keyEquivalent: "")
+        let preferences = NSMenuItem(title: "设置…", action: #selector(showSettings), keyEquivalent: ",")
         rescan.target = self
+        preferences.target = self
         nativeKeys.target = self
         menu.addItem(status)
         menu.addItem(displayPicker)
         menu.addItem(rescan)
         menu.addItem(.separator())
-        menu.addItem(shortcut)
+        menu.addItem(shortcutSummary)
         menu.addItem(nativeKeys)
+        menu.addItem(preferences)
         menu.addItem(.separator())
         menu.addItem(withTitle: "退出", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         statusItem.button?.image = NSImage(systemSymbolName: "sun.max", accessibilityDescription: "显示器亮度")
         statusItem.menu = menu
 
-        if !registerShortcuts() {
-            shortcut.title = "组合键注册失败，可能已被其他应用占用"
+        if let data = UserDefaults.standard.data(forKey: shortcutsPreference),
+           let saved = try? JSONDecoder().decode(BrightnessShortcutPair.self, from: data), saved.isValid {
+            shortcuts = saved
         }
+        do {
+            try hotKeys.apply(shortcuts)
+        } catch {
+            shortcutError = error.localizedDescription
+        }
+        updateShortcutSummary()
         let workspace = NSWorkspace.shared.notificationCenter
         workspace.addObserver(self, selector: #selector(refresh), name: NSWorkspace.didWakeNotification, object: nil)
         workspace.addObserver(
@@ -106,46 +128,43 @@ private final class BrightnessApp: NSObject, NSApplicationDelegate {
     func applicationWillTerminate(_ notification: Notification) {
         scanWork?.cancel()
         dismissFeedback()
-        hotKeys.forEach { UnregisterEventHotKey($0) }
-        if let hotKeyHandler { RemoveEventHandler(hotKeyHandler) }
+        hotKeys.invalidate()
         stopNativeTap()
         permissionTimer?.invalidate()
     }
 
-    private func registerShortcuts() -> Bool {
-        var pressed = EventTypeSpec(eventClass: OSType(kEventClassKeyboard), eventKind: UInt32(kEventHotKeyPressed))
-        let context = Unmanaged.passUnretained(self).toOpaque()
-        let result = InstallEventHandler(GetApplicationEventTarget(), { _, event, context in
-            guard let event, let context else { return OSStatus(eventNotHandledErr) }
-            var id = EventHotKeyID()
-            let result = GetEventParameter(
-                event, EventParamName(kEventParamDirectObject), EventParamType(typeEventHotKeyID),
-                nil, MemoryLayout<EventHotKeyID>.size, nil, &id
-            )
-            guard result == noErr, id.signature == shortcutSignature, id.id == 1 || id.id == 2 else {
-                return OSStatus(eventNotHandledErr)
-            }
-            let app = Unmanaged<BrightnessApp>.fromOpaque(context).takeUnretainedValue()
-            app.adjust(direction: id.id == 1 ? 1 : -1)
-            return noErr
-        }, 1, &pressed, context, &hotKeyHandler)
-        guard result == noErr else { return false }
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        showSettings()
+        return false
+    }
 
-        for (key, id) in [(kVK_UpArrow, UInt32(1)), (kVK_DownArrow, UInt32(2))] {
-            var reference: EventHotKeyRef?
-            let result = RegisterEventHotKey(
-                UInt32(key), UInt32(controlKey | optionKey), EventHotKeyID(signature: shortcutSignature, id: id),
-                GetApplicationEventTarget(), 0, &reference
+    @objc private func showSettings() {
+        if settings == nil {
+            settings = BrightnessSettings(
+                shortcuts: shortcuts, shortcutError: shortcutError, step: adjustmentStep,
+                saveShortcuts: { [weak self] in try self?.saveShortcuts($0) },
+                setStep: { UserDefaults.standard.set($0, forKey: stepPreference) }
             )
-            guard result == noErr, let reference else {
-                hotKeys.forEach { UnregisterEventHotKey($0) }
-                hotKeys.removeAll()
-                return false
-            }
-            hotKeys.append(reference)
         }
-        logger.info("Registered global brightness shortcuts")
-        return true
+        settings?.show()
+    }
+
+    private func saveShortcuts(_ pair: BrightnessShortcutPair) throws {
+        let data = try JSONEncoder().encode(pair)
+        try hotKeys.apply(pair)
+        shortcuts = pair
+        shortcutError = nil
+        UserDefaults.standard.set(data, forKey: shortcutsPreference)
+        updateShortcutSummary()
+    }
+
+    private func updateShortcutSummary() {
+        shortcutSummary.title = shortcutError ?? "\(shortcuts[.increase].title) 调亮   \(shortcuts[.decrease].title) 调暗"
+        if let shortcutError {
+            logger.error("\(shortcutError, privacy: .public)")
+        } else {
+            logger.info("Registered global brightness shortcuts")
+        }
     }
 
     @objc private func refresh() {
@@ -254,7 +273,7 @@ private final class BrightnessApp: NSObject, NSApplicationDelegate {
 
     private func adjust(direction: Int) {
         guard selectedDisplay != nil else { return }
-        pendingAdjustment = min(100, max(-100, pendingAdjustment + direction * control.step))
+        pendingAdjustment = min(100, max(-100, pendingAdjustment + direction * adjustmentStep))
         runNextCommand()
     }
 
@@ -278,7 +297,7 @@ private final class BrightnessApp: NSObject, NSApplicationDelegate {
                     }
                     self.updateStatus()
                     if feedbackVersion == self.feedbackGeneration, self.selectedDisplay?.target.id == display.target.id {
-                        let canIncrease = !self.hotKeys.isEmpty
+                        let canIncrease = self.hotKeys.isActive
                             || self.tap.map { CGEvent.tapIsEnabled(tap: $0) } == true
                         self.feedback.show(reading, canBlackout: canIncrease)
                     }
@@ -352,14 +371,14 @@ private final class BrightnessApp: NSObject, NSApplicationDelegate {
         if let tap { CFMachPortInvalidate(tap) }
         tapSource = nil
         tap = nil
-        if hotKeys.isEmpty { dismissFeedback() }
+        if !hotKeys.isActive { dismissFeedback() }
     }
 
     private func handleNative(_ type: CGEventType, _ event: CGEvent) -> Unmanaged<CGEvent>? {
         if type == .tapDisabledByTimeout {
             if let tap { CGEvent.tapEnable(tap: tap, enable: true) }
         }
-        guard selectedDisplay != nil, let key = nativeBrightnessKey(type, event) else {
+        guard settings?.isRecording != true, selectedDisplay != nil, let key = nativeBrightnessKey(type, event) else {
             return Unmanaged.passUnretained(event)
         }
         if key.pressed {
@@ -379,7 +398,7 @@ do {
     let delegate = BrightnessApp(control: DisplayControl(executable: executable, step: step))
     application.setActivationPolicy(.accessory)
     application.delegate = delegate
-    application.run()
+    withExtendedLifetime(delegate) { application.run() }
 } catch {
     logger.error("\(error.localizedDescription, privacy: .public)")
     exit(1)
