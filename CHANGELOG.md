@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.4.0 — 2026-11-28
+
+- Add settings for custom brightness shortcuts, restoring the defaults, and choosing the adjustment step.
+- Start Display Brightness at macOS login when enabled in Settings.
+- Use the Display Brightness logo as the macOS app icon.
+
 ## 1.3.1 — 2026-11-26
 
 - Adopt Display Brightness as the app, installer, and repository name.
