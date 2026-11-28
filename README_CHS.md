@@ -1,5 +1,7 @@
 # Display Brightness
 
+<img src="assets/display-brightness-logo.png" alt="Display Brightness 图标" width="96" height="96">
+
 [![MIT 许可证](https://img.shields.io/github/license/yi-ge/display-brightness?style=flat-square)](LICENSE)
 
 [English](README.md) · [发布版本](https://github.com/yi-ge/display-brightness/releases)
