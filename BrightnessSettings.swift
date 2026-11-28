@@ -1,10 +1,11 @@
 import AppKit
 import Carbon.HIToolbox
 import ServiceManagement
+import Sparkle
 
 final class BrightnessSettings: NSObject, NSWindowDelegate {
     private let window = NSWindow(
-        contentRect: NSRect(x: 0, y: 0, width: 430, height: 310),
+        contentRect: NSRect(x: 0, y: 0, width: 430, height: 370),
         styleMask: [.titled, .closable, .miniaturizable], backing: .buffered, defer: false
     )
     private let increase = NSButton(title: "", target: nil, action: nil)
@@ -16,6 +17,9 @@ final class BrightnessSettings: NSObject, NSWindowDelegate {
     private let login = NSButton(checkboxWithTitle: "登录时启动 Display Brightness", target: nil, action: nil)
     private let loginSettings = NSButton(title: "打开系统登录项", target: nil, action: nil)
     private let loginMessage = NSTextField(wrappingLabelWithString: "")
+    private let updater: SPUUpdater
+    private let automaticChecks = NSButton(checkboxWithTitle: "自动检查更新", target: nil, action: nil)
+    private let automaticInstall = NSButton(checkboxWithTitle: "自动下载并安装更新", target: nil, action: nil)
     private let saveShortcuts: (BrightnessShortcutPair) throws -> Void
     private let setStep: (Int) -> Void
     private var shortcuts: BrightnessShortcutPair
@@ -25,11 +29,12 @@ final class BrightnessSettings: NSObject, NSWindowDelegate {
     var isRecording: Bool { recording != nil && window.isKeyWindow }
 
     init(
-        shortcuts: BrightnessShortcutPair, shortcutError: String?, step: Int,
+        shortcuts: BrightnessShortcutPair, shortcutError: String?, step: Int, updater: SPUUpdater,
         saveShortcuts: @escaping (BrightnessShortcutPair) throws -> Void,
         setStep: @escaping (Int) -> Void
     ) {
         self.shortcuts = shortcuts
+        self.updater = updater
         self.saveShortcuts = saveShortcuts
         self.setStep = setStep
         super.init()
@@ -62,6 +67,11 @@ final class BrightnessSettings: NSObject, NSWindowDelegate {
         loginSettings.target = self
         loginSettings.action = #selector(openLoginSettings)
         loginMessage.textColor = .secondaryLabelColor
+        automaticChecks.target = self
+        automaticChecks.action = #selector(changeAutomaticChecks)
+        automaticInstall.target = self
+        automaticInstall.action = #selector(changeAutomaticInstall)
+        let checkUpdate = NSButton(title: "检查更新…", target: self, action: #selector(checkForUpdates))
 
         let shortcutsHeading = NSTextField(labelWithString: "快捷键")
         shortcutsHeading.font = .boldSystemFont(ofSize: NSFont.systemFontSize)
@@ -71,7 +81,8 @@ final class BrightnessSettings: NSObject, NSWindowDelegate {
             row([NSTextField(labelWithString: "调暗"), decrease]),
             reset, shortcutMessage,
             row([NSTextField(labelWithString: "每次调节幅度"), stepValue, stepper]),
-            row([login, loginSettings]), loginMessage
+            row([login, loginSettings]), loginMessage,
+            row([automaticChecks, automaticInstall]), checkUpdate
         ])
         body.orientation = .vertical
         body.alignment = .leading
@@ -92,6 +103,7 @@ final class BrightnessSettings: NSObject, NSWindowDelegate {
         ])
         updateShortcutButtons()
         updateLogin()
+        updateUpdaterSettings()
     }
 
     private func row(_ views: [NSView]) -> NSStackView {
@@ -104,6 +116,7 @@ final class BrightnessSettings: NSObject, NSWindowDelegate {
 
     func show() {
         updateLogin()
+        updateUpdaterSettings()
         if #available(macOS 14.0, *) {
             NSApp.activate()
         } else {
@@ -114,6 +127,7 @@ final class BrightnessSettings: NSObject, NSWindowDelegate {
 
     func windowDidBecomeKey(_ notification: Notification) {
         updateLogin()
+        updateUpdaterSettings()
     }
 
     func windowDidResignKey(_ notification: Notification) {
@@ -201,6 +215,26 @@ final class BrightnessSettings: NSObject, NSWindowDelegate {
 
     @objc private func openLoginSettings() {
         SMAppService.openSystemSettingsLoginItems()
+    }
+
+    @objc private func changeAutomaticChecks() {
+        updater.automaticallyChecksForUpdates = automaticChecks.state == .on
+        updateUpdaterSettings()
+    }
+
+    @objc private func checkForUpdates() {
+        if updater.canCheckForUpdates { updater.checkForUpdates() }
+    }
+
+    @objc private func changeAutomaticInstall() {
+        updater.automaticallyDownloadsUpdates = automaticInstall.state == .on
+        updateUpdaterSettings()
+    }
+
+    private func updateUpdaterSettings() {
+        automaticChecks.state = updater.automaticallyChecksForUpdates ? .on : .off
+        automaticInstall.isEnabled = updater.automaticallyChecksForUpdates && updater.allowsAutomaticUpdates
+        automaticInstall.state = automaticInstall.isEnabled && updater.automaticallyDownloadsUpdates ? .on : .off
     }
 
     private func updateLogin(error: String? = nil) {

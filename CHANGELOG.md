@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.5.0 — 2026-11-29
+
+- Check GitHub Releases for updates automatically or from the menu bar.
+- Let users opt into automatic download and installation.
+- Verify the signed update feed and download with Sparkle.
+
 ## 1.4.0 — 2026-11-28
 
 - Add settings for custom brightness shortcuts, restoring the defaults, and choosing the adjustment step.

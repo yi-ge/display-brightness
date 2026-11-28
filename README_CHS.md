@@ -47,6 +47,7 @@ open "$HOME/Applications/Display Brightness.app"
 - **全局快捷键**。默认用 Control + Option + ↓ 调暗、Control + Option + ↑ 调亮。打开太阳图标菜单的「设置…」，可以录制新组合或恢复默认。新组合至少包含 Control、Option、Command 中的一个修饰键，无需输入权限。
 - **调节幅度**。在设置中修改「每次调节幅度」，调整每次按键改变的亮度。
 - **登录时启动**。在设置中开启「登录时启动 Display Brightness」。如果 macOS 要求批准，点击「打开系统登录项」进入系统设置。
+- **自动更新**。从 1.5.0 开始，应用会自动检查 GitHub Release。点太阳菜单里的「检查更新…」可立即检查。在设置中可关闭自动检查，或开启自动下载并安装。1.4.0 及更早版本需先手动安装一次最新 DMG。
 - **选择屏幕**。从太阳图标菜单打开「控制的显示器」。自动模式优先选择兼容的主屏。指定屏断开时会切到另一台兼容屏，接回后恢复该选择。
 - **亮度进度条**。根据选中屏幕的硬件亮度上限与回读值显示百分比。
 - **0% 黑屏**。回读为 0 时，选中屏幕显示全黑画面，视频连接继续保持。调亮即可恢复。
@@ -61,4 +62,4 @@ open "$HOME/Applications/Display Brightness.app"
 
 [贡献说明](CONTRIBUTING.md) · [签名与发布](RELEASING.md) · [更新日志](CHANGELOG.md)
 
-本项目使用 [MIT 许可证](LICENSE)。单独安装的 m1ddc 也使用 [MIT 许可证](https://github.com/waydabber/m1ddc/blob/main/LICENSE)。
+本项目使用 [MIT 许可证](LICENSE)。更新功能由 [Sparkle](https://sparkle-project.org/) 提供，其许可证随应用分发。单独安装的 m1ddc 也使用 [MIT 许可证](https://github.com/waydabber/m1ddc/blob/main/LICENSE)。

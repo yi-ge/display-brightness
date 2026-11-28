@@ -2,6 +2,8 @@
 set -euo pipefail
 
 : "${MACOS_SIGN_IDENTITY:?Set MACOS_SIGN_IDENTITY to a Developer ID Application identity}"
+: "${SPARKLE_ED_KEY_FILE:?Set SPARKLE_ED_KEY_FILE to the Sparkle EdDSA signing key file}"
+test -s "$SPARKLE_ED_KEY_FILE"
 export MACOS_SIGN_IDENTITY
 
 if [[ -n ${MACOS_NOTARY_KEY_PATH:-} ]]; then
@@ -57,11 +59,28 @@ fi
 /usr/sbin/spctl --assess --type open --context context:primary-signature --verbose "$image"
 /usr/sbin/spctl --assess --type execute --verbose "$app"
 /usr/bin/hdiutil verify "$image"
+
+# Generate the feed after stapling so the signature covers exactly the uploaded DMG.
+sparkle="$("$source_dir/scripts/sparkle.sh")"
+release_url="https://github.com/yi-ge/display-brightness/releases/tag/v$version"
+/usr/bin/awk -v heading="## $version " '
+    index($0, heading) == 1 { notes = 1; next }
+    notes && /^## / { exit }
+    notes { print }
+' "$source_dir/CHANGELOG.md" > "$staging/${artifact%.dmg}.md"
+"$sparkle/bin/generate_appcast" --ed-key-file "$SPARKLE_ED_KEY_FILE" \
+    --download-url-prefix "https://github.com/yi-ge/display-brightness/releases/download/v$version/" \
+    --link "$release_url" --embed-release-notes --maximum-deltas 0 "$staging"
+"$sparkle/bin/sign_update" --ed-key-file "$SPARKLE_ED_KEY_FILE" --verify "$staging/appcast.xml"
+signature="$(/usr/bin/xmllint --xpath 'string(//enclosure/@*[local-name()="edSignature"])' "$staging/appcast.xml")"
+test -n "$signature"
+"$sparkle/bin/sign_update" --ed-key-file "$SPARKLE_ED_KEY_FILE" --verify "$image" "$signature"
+
 (
     cd "$staging"
     /usr/bin/shasum -a 256 "$artifact" > SHA256SUMS.txt
 )
 
 mkdir -p "$source_dir/dist"
-mv "$staging/$artifact" "$staging/SHA256SUMS.txt" "$source_dir/dist/"
+mv "$staging/$artifact" "$staging/SHA256SUMS.txt" "$staging/appcast.xml" "$source_dir/dist/"
 printf 'Verified release: %s/dist/%s\n' "$source_dir" "$artifact"

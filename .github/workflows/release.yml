@@ -42,6 +42,7 @@ jobs:
           ASC_KEY_P8_BASE64: ${{ secrets.ASC_KEY_P8_BASE64 }}
           MACOS_NOTARY_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           MACOS_NOTARY_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          SPARKLE_ED_PRIVATE_KEY: ${{ secrets.SPARKLE_ED_PRIVATE_KEY }}
           APPLE_TEAM_ID: MD2Y658336
         run: |
           set -u
@@ -50,6 +51,7 @@ jobs:
           : "${ASC_KEY_P8_BASE64:?Missing ASC_KEY_P8_BASE64}"
           : "${MACOS_NOTARY_KEY_ID:?Missing ASC_KEY_ID}"
           : "${MACOS_NOTARY_ISSUER_ID:?Missing ASC_ISSUER_ID}"
+          : "${SPARKLE_ED_PRIVATE_KEY:?Missing SPARKLE_ED_PRIVATE_KEY}"
           umask 077
           signing_dir="$(mktemp -d "$RUNNER_TEMP/display-brightness-signing.XXXXXX")"
           keychain="$signing_dir/release.keychain-db"
@@ -61,7 +63,9 @@ jobs:
           printf '%s' "$DEVELOPER_ID_P12_BASE64" | base64 -D > "$signing_dir/identity.p12"
           export MACOS_NOTARY_KEY_PATH="$signing_dir/AuthKey.p8"
           printf '%s' "$ASC_KEY_P8_BASE64" | base64 -D > "$MACOS_NOTARY_KEY_PATH"
-          unset DEVELOPER_ID_P12_BASE64 ASC_KEY_P8_BASE64
+          export SPARKLE_ED_KEY_FILE="$signing_dir/sparkle.key"
+          printf '%s' "$SPARKLE_ED_PRIVATE_KEY" > "$SPARKLE_ED_KEY_FILE"
+          unset DEVELOPER_ID_P12_BASE64 ASC_KEY_P8_BASE64 SPARKLE_ED_PRIVATE_KEY
 
           keychain_password="$(openssl rand -hex 32)"
           security create-keychain -p "$keychain_password" "$keychain"
@@ -87,6 +91,7 @@ jobs:
           path: |
             dist/*.dmg
             dist/SHA256SUMS.txt
+            dist/appcast.xml
           if-no-files-found: error
 
   publish:
@@ -109,5 +114,6 @@ jobs:
         run: |
           artifact="Display-Brightness-${GITHUB_REF_NAME#v}-macos-arm64.dmg"
           sha256sum -c SHA256SUMS.txt
+          test -s appcast.xml
           gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" \
-            --verify-tag --generate-notes "$artifact" SHA256SUMS.txt
+            --verify-tag --generate-notes "$artifact" SHA256SUMS.txt appcast.xml
